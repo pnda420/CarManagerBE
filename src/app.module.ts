@@ -9,6 +9,7 @@ import { GeneratedPage } from './generated-pages/generated-pages.entity';
 import { User } from './users/users.entity';
 import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from './users/users.dto';
 import { AuthModule } from './auth/auth.module';
+import { PageAiModule } from './page-ai/page-ai.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AuthModule } from './auth/auth.module';
     AuthModule,
     GeneratedPagesModule,
     ContactRequestsModule,
+    PageAiModule,
   ],
 })
 export class AppModule { }

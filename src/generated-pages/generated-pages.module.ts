@@ -1,15 +1,18 @@
 import { Module } from '@nestjs/common';
-import { GeneratedPagesService } from './generated-pages.service';
-import { GeneratedPagesController } from './generated-pages.controller';
-import { GeneratedPage } from './generated-pages.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GeneratedPagesController } from './generated-pages.controller';
+import { GeneratedPagesService } from './generated-pages.service';
+import { GeneratedPage } from './generated-pages.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GeneratedPage])
+    TypeOrmModule.forFeature([GeneratedPage]) // Repository registrieren
   ],
+  controllers: [GeneratedPagesController],
   providers: [GeneratedPagesService],
-  exports: [GeneratedPagesService],
-  controllers: [GeneratedPagesController]
+  exports: [
+    GeneratedPagesService,
+    TypeOrmModule // WICHTIG: TypeOrmModule auch exportieren!
+  ]
 })
 export class GeneratedPagesModule {}

@@ -16,14 +16,6 @@ export class CreateGeneratedPageDto {
   @IsString()
   @IsOptional()
   description?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  isPublished?: boolean;
-
-  @IsString()
-  @IsOptional()
-  previewUrl?: string;
 }
 
 export class UpdateGeneratedPageDto {
@@ -38,12 +30,4 @@ export class UpdateGeneratedPageDto {
   @IsString()
   @IsOptional()
   description?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  isPublished?: boolean;
-
-  @IsString()
-  @IsOptional()
-  previewUrl?: string;
 }
