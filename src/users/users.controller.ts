@@ -12,6 +12,8 @@ import {
   } from '@nestjs/common';
   import { UsersService } from './users.service';
 import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from './users.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { AdminGuard } from 'src/auth/guards/admin.guard';
   
   @Controller('users')
   export class UsersController {
@@ -75,7 +77,7 @@ import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from '
   
     // User Management Routen
     // Später: nur Admin oder der User selbst darf zugreifen
-    // @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard, AdminGuard)
     @Get()
     async findAll() {
       return this.usersService.findAll();

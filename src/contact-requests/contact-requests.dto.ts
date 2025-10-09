@@ -14,7 +14,6 @@ export class CreateContactRequestDto {
   serviceType: ServiceType;
 
   @IsString()
-  @MinLength(10, { message: '2-3 Sätze reichen - aber mindestens 10 Zeichen ;)' })
   @MaxLength(2000)
   message: string;
 
