@@ -8,6 +8,7 @@ import { ContactRequest } from './contact-requests/contact-requests.entity';
 import { GeneratedPage } from './generated-pages/generated-pages.entity';
 import { User } from './users/users.entity';
 import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from './users/users.dto';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from '
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,
+    AuthModule,
     GeneratedPagesModule,
     ContactRequestsModule,
   ],

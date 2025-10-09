@@ -1,23 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ContactRequest } from './contact-requests.entity';
 import { CreateContactRequestDto, UpdateContactRequestDto } from './contact-requests.dto';
+import { ContactRequest } from './contact-requests.entity';
 
 @Injectable()
 export class ContactRequestsService {
   constructor(
     @InjectRepository(ContactRequest)
     private readonly contactRepo: Repository<ContactRequest>,
-  ) {}
+  ) { }
 
   async create(dto: CreateContactRequestDto): Promise<ContactRequest> {
     const request = this.contactRepo.create(dto);
     const saved = await this.contactRepo.save(request);
-    
+
     // TODO: Hier kannst du eine E-Mail an dich selbst senden
     // await this.emailService.sendContactNotification(saved);
-    
+
     return saved;
   }
 
@@ -40,11 +40,11 @@ export class ContactRequestsService {
       where: { id },
       relations: ['user'],
     });
-    
+
     if (!request) {
       throw new NotFoundException(`Contact request with ID ${id} not found`);
     }
-    
+
     return request;
   }
 

@@ -2,6 +2,10 @@ import { ContactRequest } from 'src/contact-requests/contact-requests.entity';
 import { GeneratedPage } from 'src/generated-pages/generated-pages.entity';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin'
+}
 
 @Entity('users')
 export class User {
@@ -15,7 +19,14 @@ export class User {
   name: string;
 
   @Column()
-  password: string; // Wichtig: Später mit bcrypt hashen!
+  password: string;
+
+  @Column({
+    type: 'text',
+    enum: UserRole,
+    default: UserRole.USER
+  })
+  role: UserRole;
 
   @Column({ default: false })
   wantsNewsletter: boolean;

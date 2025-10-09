@@ -1,7 +1,6 @@
 import { User } from 'src/users/users.entity';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
-
 @Entity('generated_pages')
 export class GeneratedPage {
   @PrimaryGeneratedColumn('uuid')

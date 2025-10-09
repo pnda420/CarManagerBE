@@ -1,7 +1,6 @@
 import { User } from 'src/users/users.entity';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
-
 export enum ServiceType {
     NOT_SURE = 'not_sure',
     SIMPLE_WEBSITE = 'simple_website',
