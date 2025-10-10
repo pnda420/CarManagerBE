@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import emailjs from '@emailjs/nodejs';
 
 // Toggle hier: true = wirklich senden, false = nur console.log
-const SEND_REAL_EMAILS = true;
+const SEND_REAL_EMAILS = false;
 
 interface EmailParams extends Record<string, unknown> {
     to_email: string;
@@ -77,12 +77,15 @@ export class EmailService {
         }
     }
 
-
     async sendContactRequestConfirmation(data: {
         userEmail: string;
         userName: string;
         serviceType: string;
     }): Promise<void> {
+        if(!SEND_REAL_EMAILS){
+            this.logger.log('Email would be sent to: ' + data);
+            return;
+        }
         const emailParams: EmailParams = {
             to_email: data.userEmail,
             subject: 'Vielen Dank für Ihre Anfrage!',
@@ -100,6 +103,51 @@ export class EmailService {
             company_email: this.configService.get<string>('COMPANY_EMAIL'),
             company_website: this.configService.get<string>('COMPANY_WEBSITE'),
             footer_note: 'Bei Rückfragen stehen wir Ihnen jederzeit zur Verfügung.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendWebsiteGenerationComplete(data: {
+        userEmail: string;
+        userName: string;
+        projectName: string;
+        websiteId: string;
+        typeOfWebsite: string;
+    }): Promise<void> {
+
+        if(!SEND_REAL_EMAILS){
+            this.logger.log('Email would be sent to: ' + data);
+            return;
+        }
+        const previewUrl = `${this.configService.get<string>('FRONTEND_URL')}/preview/${data.websiteId}`;
+
+
+        const websiteTypeNames: Record<string, string> = {
+            'praesentation': 'Präsentations-Website',
+            'landing': 'Landing Page',
+            'event': 'Event-Website'
+        };
+
+        const websiteTypeName = websiteTypeNames[data.typeOfWebsite] || 'Website';
+
+        const emailParams: EmailParams = {
+            to_email: data.userEmail,
+            subject: `🎉 Ihre Website "${data.projectName}" ist fertig!`,
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hallo',
+            customer_name: data.userName,
+            message: `Großartige Neuigkeiten! Ihre ${websiteTypeName} "${data.projectName}" wurde erfolgreich generiert und steht nun zur Vorschau bereit.
+
+Sie können Ihre neue Website jetzt ansehen, testen und bei Bedarf Anpassungen vornehmen. Klicken Sie einfach auf den Button unten, um direkt zur Vorschau zu gelangen.
+
+Wir hoffen, dass das Ergebnis Ihren Erwartungen entspricht. Bei Fragen oder Änderungswünschen stehen wir Ihnen gerne zur Verfügung.`,
+            highlight_message: '✨ Ihre Website ist jetzt online und bereit zur Ansicht!',
+            button_url: previewUrl,
+            button_text: 'Website-Vorschau öffnen',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Sie können die Vorschau jederzeit über Ihr Dashboard aufrufen.',
         };
 
         await this.sendEmail(emailParams);
