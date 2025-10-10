@@ -22,7 +22,7 @@ export class GeneratedPagesController {
     constructor(private readonly pagesService: GeneratedPagesService) { }
 
     // Neue Page erstellen
-    // @UseGuards(JwtAuthGuard) - später mit Auth
+    @UseGuards(JwtAuthGuard)
     @Post()
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() dto: CreateGeneratedPageDto) {
@@ -30,14 +30,14 @@ export class GeneratedPagesController {
     }
 
     // Alle Pages eines Users
-    // @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard)
     @Get('user/:userId')
     async findByUser(@Param('userId') userId: string) {
         return this.pagesService.findByUser(userId);
     }
 
     // Anzahl Pages eines Users
-    // @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard)
     @Get('user/:userId/count')
     async countByUser(@Param('userId') userId: string) {
         const count = await this.pagesService.countByUser(userId);
@@ -68,7 +68,7 @@ export class GeneratedPagesController {
     }
 
     // Page aktualisieren
-    // @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard)
     @Patch(':id')
     async update(
         @Param('id') id: string,
@@ -79,7 +79,7 @@ export class GeneratedPagesController {
     }
 
     // Page löschen
-    // @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard)
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     async delete(

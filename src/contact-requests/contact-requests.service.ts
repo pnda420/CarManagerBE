@@ -3,21 +3,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateContactRequestDto, UpdateContactRequestDto } from './contact-requests.dto';
 import { ContactRequest } from './contact-requests.entity';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class ContactRequestsService {
   constructor(
     @InjectRepository(ContactRequest)
     private readonly contactRepo: Repository<ContactRequest>,
+    private readonly emailService: EmailService
   ) { }
 
   async create(dto: CreateContactRequestDto): Promise<ContactRequest> {
     const request = this.contactRepo.create(dto);
     const saved = await this.contactRepo.save(request);
-
-    // TODO: Hier kannst du eine E-Mail an dich selbst senden
-    // await this.emailService.sendContactNotification(saved);
-
+  
+    // Danke-Email an den User schicken
+    await this.emailService.sendContactRequestConfirmation({
+      userEmail: dto.email,
+      userName: dto.name,
+      serviceType: dto.serviceType,
+    });
+  
     return saved;
   }
 
