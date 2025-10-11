@@ -1,12 +1,15 @@
 import { User } from 'src/users/users.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
+  ManyToOne, JoinColumn, Index
+} from 'typeorm';
 
 @Entity('generated_pages')
 export class GeneratedPage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column('uuid')
   userId: string;
 
   @ManyToOne(() => User, user => user.generatedPages, { onDelete: 'CASCADE' })
@@ -17,20 +20,21 @@ export class GeneratedPage {
   name: string; // z.B. "Homepage für Restaurant", "Landingpage Startup"
 
   @Column('text')
-  pageContent: string; // Der generierte HTML/Code als langer String
+  pageContent: string; // Generierter HTML/Code (lang)
 
-  @Column({ nullable: true })
-  description: string; // Optional: Kurzbeschreibung was generiert wurde
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
+  @Index()
   @Column({ default: false })
-  isPublished: boolean; // Falls du später Live/Draft unterscheiden willst
+  isPublished: boolean;
 
-  @Column({ nullable: true })
-  previewUrl: string; // Falls du Preview-Links anbietest
+  @Column({ type: 'text', nullable: true })
+  previewUrl: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz', default: () => 'now()' })
   updatedAt: Date;
 }

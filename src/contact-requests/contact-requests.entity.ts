@@ -1,12 +1,15 @@
 import { User } from 'src/users/users.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+    Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne,
+    JoinColumn, Index
+} from 'typeorm';
 
 export enum ServiceType {
     NOT_SURE = 'not_sure',
     SIMPLE_WEBSITE = 'simple_website',
     STANDARD_WEBSITE = 'standard_website',
     INDIVIDUAL_WEBSITE = 'individual_website',
-    SEO = 'seo'
+    SEO = 'seo',
 }
 
 @Entity('contact_requests')
@@ -17,38 +20,45 @@ export class ContactRequest {
     @Column()
     name: string;
 
+    // In PG per Migration auf CITEXT umstellen (case-insensitive Unique/Filter möglich)
     @Column()
     email: string;
 
     @Column({
-        type: 'text',
+        type: 'enum',
         enum: ServiceType,
-        default: ServiceType.NOT_SURE
+        enumName: 'service_type', // Name des PG-Enum-Typs
+        default: ServiceType.NOT_SURE,
     })
     serviceType: ServiceType;
 
     @Column('text')
-    message: string; // "Worum geht's?"
+    message: string;
 
+    @Index()
     @Column({ default: false })
-    prefersCallback: boolean; // "Lieber Rückruf statt E-Mail?"
+    prefersCallback: boolean;
 
     @Column({ nullable: true })
-    phoneNumber: string; // Falls Rückruf gewünscht
+    phoneNumber: string | null;
 
+    @Index()
     @Column({ default: false })
-    isProcessed: boolean; // Für deine Verwaltung
+    isProcessed: boolean;
 
-    @Column({ nullable: true })
-    notes: string; // Interne Notizen für dich
+    @Column({ type: 'text', nullable: true })
+    notes: string | null;
 
-    @Column({ nullable: true })
-    userId: string; // Optional: Falls eingeloggter User anfrage stellt
+    @Column('uuid', { nullable: true })
+    userId: string | null;
 
-    @ManyToOne(() => User, user => user.contactRequests, { nullable: true, onDelete: 'SET NULL' })
+    @ManyToOne(() => User, user => user.contactRequests, {
+        nullable: true,
+        onDelete: 'SET NULL',
+    })
     @JoinColumn({ name: 'userId' })
-    user: User;
+    user: User | null;
 
-    @CreateDateColumn()
+    @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
     createdAt: Date;
 }

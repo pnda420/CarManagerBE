@@ -83,7 +83,7 @@ export class EmailService {
         serviceType: string;
     }): Promise<void> {
         if(!SEND_REAL_EMAILS){
-            this.logger.log('Email would be sent to: ' + data);
+            this.logger.log('Email would be sent to: ' + JSON.stringify(data));
             return;
         }
         const emailParams: EmailParams = {
@@ -117,7 +117,7 @@ export class EmailService {
     }): Promise<void> {
 
         if(!SEND_REAL_EMAILS){
-            this.logger.log('Email would be sent to: ' + data);
+            this.logger.log('Email would be sent to: ' + JSON.stringify(data));
             return;
         }
         const previewUrl = `${this.configService.get<string>('FRONTEND_URL')}/preview/${data.websiteId}`;

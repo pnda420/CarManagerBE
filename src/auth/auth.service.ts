@@ -10,6 +10,7 @@ export interface JwtPayload {
     sub: string;
     email: string;
     role: UserRole;
+    createdAt: Date;
 }
 
 export interface LoginResponse {
@@ -19,6 +20,7 @@ export interface LoginResponse {
         email: string;
         name: string;
         role: UserRole;
+        createdAt: Date;
     };
 }
 
@@ -31,35 +33,60 @@ export class AuthService {
     ) { }
 
     async register(email: string, name: string, password: string): Promise<LoginResponse> {
+        // 1) Eingaben prüfen
+        if (!email || !password) {
+            throw new UnauthorizedException('Email and password are required');
+        }
+        email = email.trim().toLowerCase();
+
+        // 2) Existenz prüfen (bei CITEXT ist das case-insensitive)
         const existing = await this.userRepo.findOne({ where: { email } });
         if (existing) {
             throw new ConflictException('Email already exists');
         }
 
+        // 3) Passwort hashen
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // 4) User speichern
         const user = this.userRepo.create({
             email,
             name,
             password: hashedPassword,
             role: UserRole.USER,
         });
-
         const savedUser = await this.userRepo.save(user);
+
+        // 5) Token zurückgeben
         return this.generateToken(savedUser);
     }
 
     async login(email: string, password: string): Promise<LoginResponse> {
-        const user = await this.userRepo.findOne({ where: { email } });
-        if (!user) {
+        // 1) Eingaben prüfen
+        if (!email || !password) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+        email = email.trim().toLowerCase();
+
+        // 2) User inkl. Passwort laden (wichtig!)
+        // Funktioniert egal ob @Column({ select: false }) gesetzt ist oder nicht
+        const user = await this.userRepo
+            .createQueryBuilder('user')
+            .addSelect('user.password')
+            .where('LOWER(user.email) = :email', { email }) // falls Spalte kein CITEXT ist
+            .getOne();
+
+        if (!user || !user.password) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
+        // 3) Passwort prüfen
+        const ok = await bcrypt.compare(password, user.password);
+        if (!ok) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
+        // 4) Token
         return this.generateToken(user);
     }
 
@@ -76,6 +103,7 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             role: user.role,
+            createdAt: user.createdAt,
         };
 
         console.log('🎫 Generiere neuen Token mit Secret:', process.env.JWT_SECRET);
@@ -91,6 +119,7 @@ export class AuthService {
                 email: user.email,
                 name: user.name,
                 role: user.role,
+                createdAt: user.createdAt,
             },
         };
     }
