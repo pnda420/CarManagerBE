@@ -82,7 +82,7 @@ export class EmailService {
         userName: string;
         serviceType: string;
     }): Promise<void> {
-        if(!SEND_REAL_EMAILS){
+        if (!SEND_REAL_EMAILS) {
             this.logger.log('Email would be sent to: ' + JSON.stringify(data));
             return;
         }
@@ -116,7 +116,7 @@ export class EmailService {
         typeOfWebsite: string;
     }): Promise<void> {
 
-        if(!SEND_REAL_EMAILS){
+        if (!SEND_REAL_EMAILS) {
             this.logger.log('Email would be sent to: ' + JSON.stringify(data));
             return;
         }
@@ -152,5 +152,92 @@ Wir hoffen, dass das Ergebnis Ihren Erwartungen entspricht. Bei Fragen oder Änd
 
         await this.sendEmail(emailParams);
     }
+
+    // email.service.ts (Ergänzung in der Klasse EmailService)
+
+    async sendWebsiteReadyEmail(data: {
+        to: string;
+        projectName: string;
+        pageId: string;
+        previewUrl: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Website Ready Email würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            this.logger.log(`   Projekt: ${data.projectName}`);
+            this.logger.log(`   Page ID: ${data.pageId}`);
+            this.logger.log(`   Preview URL: ${data.previewUrl}`);
+            return;
+        }
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: `🎉 Deine Website "${data.projectName}" ist fertig!`,
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hey',
+            customer_name: '', // optional: aus Email extrahieren
+            message: `Großartige Neuigkeiten! Dein Website-Projekt "${data.projectName}" wurde erfolgreich mit KI generiert und ist jetzt bereit zur Vorschau.
+
+Die KI hat eine moderne, einzigartige Website basierend auf deinen Vorgaben erstellt. Du kannst sie jetzt ansehen, testen und bei Bedarf weitere Anpassungen vornehmen.
+
+Klicke einfach auf den Button unten, um direkt zur Vorschau zu gelangen und deine neue Website zu erleben!`,
+            highlight_message: '✨ Deine Website ist fertig und wartet auf dich!',
+            button_url: data.previewUrl,
+            button_text: '🚀 Website jetzt ansehen',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Du kannst die Vorschau jederzeit über dein Dashboard aufrufen.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendWebsiteErrorEmail(data: {
+        to: string;
+        projectName: string;
+        error: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Website Error Email würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            this.logger.log(`   Projekt: ${data.projectName}`);
+            this.logger.log(`   Fehler: ${data.error}`);
+            return;
+        }
+
+        const retryUrl = `${this.configService.get<string>('FRONTEND_URL')}/preview-form`;
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: `⚠️ Problem bei der Erstellung von "${data.projectName}"`,
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hallo',
+            customer_name: '',
+            message: `Leider ist bei der Generierung deiner Website "${data.projectName}" ein Problem aufgetreten.
+
+Fehlerdetails: ${data.error}
+
+Das kann verschiedene Gründe haben:
+• Temporäre technische Schwierigkeiten
+• Ungewöhnliche Eingabedaten
+• Überlastung des KI-Systems
+
+Wir empfehlen dir:
+1. Versuche es in ein paar Minuten erneut
+2. Überprüfe deine Eingaben
+3. Kontaktiere uns bei wiederholten Problemen
+
+Wir entschuldigen uns für die Unannehmlichkeiten und helfen dir gerne weiter!`,
+            highlight_message: '🔧 Keine Sorge – versuch es einfach nochmal oder kontaktiere uns!',
+            button_url: retryUrl,
+            button_text: 'Erneut versuchen',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Bei Fragen stehen wir dir jederzeit zur Verfügung.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
 
 }

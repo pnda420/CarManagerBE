@@ -1,112 +1,108 @@
 import { Controller, Post, Body, Query, BadRequestException, UseGuards, Req } from '@nestjs/common';
-import { IsString, IsEmail, IsOptional, IsIn, IsNotEmpty, MinLength } from 'class-validator';
 import { PageAiService } from './page-ai.service';
 import { GeneratedPagesService } from 'src/generated-pages/generated-pages.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-
-export class GeneratePageDto {
-    @IsIn(['business', 'private'])
-    customerType: 'business' | 'private';
-
-    @IsString()
-    @IsNotEmpty()
-    @MinLength(2)
-    projectName: string;
-
-    @IsString()
-    @IsOptional()
-    companyName?: string;
-
-    @IsIn(['praesentation', 'landing', 'event'])
-    typeOfWebsite: 'praesentation' | 'landing' | 'event';
-
-    @IsString()
-    @IsOptional()
-    primaryColor?: string;
-
-    @IsString()
-    @IsOptional()
-    secondaryColor?: string;
-
-    @IsIn(['modern', 'friendly', 'elegant', 'playful'])
-    @IsOptional()
-    designStyle?: 'modern' | 'friendly' | 'elegant' | 'playful';
-
-    @IsString()
-    @IsNotEmpty()
-    @MinLength(30)
-    contentInformation: string;
-
-    @IsString()
-    @IsOptional()
-    userId?: string;
-
-    @IsEmail()
-    @IsOptional()
-    userEmail?: string;
-
-    @IsString()
-    @IsOptional()
-    generatedAt?: string;
-}
+import { EmailService } from 'src/email/email.service';
 
 @Controller('page-ai')
 export class PageAiController {
     constructor(
         private readonly pageAiService: PageAiService,
-        private readonly generatedPagesService: GeneratedPagesService // ✅ Inject
+        private readonly generatedPagesService: GeneratedPagesService,
+        private readonly emailService: EmailService
     ) { }
-    
+
     @Post('mockup')
-    @UseGuards(JwtAuthGuard) // ✅ Nur für eingeloggte User
+    @UseGuards(JwtAuthGuard)
     async generateMockup(
-        @Body('form') formData: GeneratePageDto,
+        @Body('form') formData: any,
         @Query('quality') quality: 'fast' | 'balanced' | 'premium' = 'balanced',
-        @Req() req: any // ✅ User aus JWT
+        @Req() req: any
     ) {
         if (!['fast', 'balanced', 'premium'].includes(quality)) {
             throw new BadRequestException('Quality must be: fast, balanced, or premium');
         }
 
-        try {
-            console.log(`📝 Website-Generierung: ${formData.projectName} (${quality})`);
+        const userId = req.user.id;
+        const userEmail = req.user.email;
 
-            // 1. Website generieren
+        console.log(`📝 Website-Generierung: ${formData.projectName} (${quality})`);
+
+        // ✅ Starte Generierung im Hintergrund (Fire & Forget)
+        this.processGenerationInBackground(formData, quality, userId, userEmail);
+
+        // ✅ Sofortige Response zurückgeben
+        return {
+            ok: true,
+            status: 'processing',
+            message: 'Website wird generiert. Du erhältst eine Email wenn fertig.',
+            estimatedTime: this.getEstimatedTime(quality),
+            metadata: {
+                quality,
+                projectName: formData.projectName,
+                websiteType: formData.typeOfWebsite,
+                startedAt: new Date().toISOString()
+            }
+        };
+    }
+
+    // ✅ Background Processing (läuft unabhängig vom Client)
+    private async processGenerationInBackground(
+        formData: any,
+        quality: 'fast' | 'balanced' | 'premium',
+        userId: string,
+        userEmail: string
+    ): Promise<void> {
+        try {
+            console.log(`🚀 Background: Generiere ${formData.projectName}...`);
+
+            // Website generieren (läuft async im Background)
             const result = await this.pageAiService.generateWebsiteMockup(formData, quality);
 
-            // 2. ✅ IN DATENBANK SPEICHERN
+            console.log(`✅ Background: Generierung abgeschlossen`);
+
+            // In DB speichern
             const savedPage = await this.generatedPagesService.create({
-                userId: req.user.id, // Aus JWT
+                userId,
                 name: formData.projectName,
                 pageContent: result.content,
-                description: formData.contentInformation.substring(0, 200), // Erste 200 Zeichen
+                description: formData.contentInformation.substring(0, 200),
             });
 
-            console.log(`✅ Page gespeichert mit ID: ${savedPage.id}`);
+            console.log(`💾 Background: Page gespeichert mit ID: ${savedPage.id}`);
 
-            return {
-                ok: true,
-                html: result.content,
-                rawLength: result.raw.length,
-                pageId: savedPage.id, // ✅ ID zurückgeben
-                savedPage: savedPage, // ✅ Komplettes Objekt
-                metadata: {
-                    quality,
-                    tokensUsed: result.tokensUsed,
-                    model: 'gpt-5',
-                    generatedAt: new Date().toISOString(),
-                    projectName: formData.projectName,
-                    websiteType: formData.typeOfWebsite
-                }
-            };
+            // ✅ Success Email senden
+            await this.emailService.sendWebsiteReadyEmail({
+                to: userEmail,
+                projectName: formData.projectName,
+                pageId: savedPage.id,
+                previewUrl: `${process.env.FRONTEND_URL}/preview?id=${savedPage.id}`
+            });
+
+            console.log(`📧 Background: Email gesendet an ${userEmail}`);
+
         } catch (error) {
-            console.error('❌ Fehler bei Website-Generierung:', error);
+            console.error('❌ Background: Fehler bei Generierung:', error);
 
-            throw new BadRequestException({
-                ok: false,
-                error: error.message || 'Fehler bei der Website-Generierung',
-                timestamp: new Date().toISOString()
-            });
+            // ✅ Error Email senden
+            try {
+                await this.emailService.sendWebsiteErrorEmail({
+                    to: userEmail,
+                    projectName: formData.projectName,
+                    error: error?.message ?? 'Unbekannter Fehler'
+                });
+            } catch (emailError) {
+                console.error('❌ Background: Email-Fehler:', emailError);
+            }
         }
+    }
+
+    private getEstimatedTime(quality: string): string {
+        const times = {
+            fast: '15-20 Sekunden',
+            balanced: '30-45 Sekunden',
+            premium: '60-90 Sekunden'
+        };
+        return times[quality] || '30-45 Sekunden';
     }
 }

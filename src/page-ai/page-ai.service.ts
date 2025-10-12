@@ -248,7 +248,7 @@ export class PageAiService {
             model: 'gpt-5',
             messages: [
                 {
-                    role: 'developer',
+                    role: 'system',
                     content: PageAiService.MOCKUP_SYSTEM
                 },
                 {
@@ -278,16 +278,16 @@ export class PageAiService {
     private getGPT5Config(quality: QualityLevel): GPT5Config {
         const configs: Record<QualityLevel, GPT5Config> = {
             fast: {
-                reasoning_effort: 'minimal' as ReasoningEffort,
-                max_completion_tokens: 12000,
+                reasoning_effort: 'low' as ReasoningEffort,
+                max_completion_tokens: 10000,
             },
             balanced: {
                 reasoning_effort: 'low' as ReasoningEffort,
-                max_completion_tokens: 16000,
+                max_completion_tokens: 10000,
             },
             premium: {
-                reasoning_effort: 'medium' as ReasoningEffort,
-                max_completion_tokens: 20000,
+                reasoning_effort: 'low' as ReasoningEffort,
+                max_completion_tokens: 15000,
             }
         };
 
@@ -300,9 +300,8 @@ export class PageAiService {
             projectName,
             companyName,
             typeOfWebsite,
-            primaryColor = '#6366f1',
-            secondaryColor = '#8b5cf6',
-            designStyle = 'modern',
+            primaryColor,
+            designStyle,
             contentInformation,
         } = formValue;
 
@@ -320,7 +319,7 @@ ${contentInformation}
 
 ## 🎨 Brand Colors (nutze sie kreativ!)
 - **Primary**: ${primaryColor} → Kann überall hin (Backgrounds, CTAs, Accents)
-- **Secondary**: ${secondaryColor} → Mix it, blend it, gradient it!
+- **Secondary**: ${primaryColor} → Mix it, blend it, gradient it!
 
 **Du entscheidest:** Light Background? Dark Background? Gradient? Whatever looks best!
 
