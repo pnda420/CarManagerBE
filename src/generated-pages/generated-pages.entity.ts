@@ -9,8 +9,8 @@ export class GeneratedPage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
-  userId: string;
+  @Column('uuid', { nullable: true })
+  userId!: string | null;
 
   @ManyToOne(() => User, user => user.generatedPages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
@@ -18,6 +18,9 @@ export class GeneratedPage {
 
   @Column()
   name: string; // z.B. "Homepage für Restaurant", "Landingpage Startup"
+
+  @Column()
+  contactEmail: string;
 
   @Column('text')
   pageContent: string; // Generierter HTML/Code (lang)

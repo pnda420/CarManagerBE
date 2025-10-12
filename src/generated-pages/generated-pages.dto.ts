@@ -1,8 +1,8 @@
-import { IsString, IsBoolean, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength, IsEmail } from 'class-validator';
 
 export class CreateGeneratedPageDto {
   @IsString()
-  userId: string;
+  userId?: string;
 
   @IsString()
   @MinLength(3)
@@ -12,6 +12,9 @@ export class CreateGeneratedPageDto {
   @IsString()
   @MinLength(10, { message: 'Page content ist zu kurz' })
   pageContent: string; // Dein langer HTML/Code String
+
+  @IsEmail()
+  contactEmail!: string;
 
   @IsString()
   @IsOptional()
