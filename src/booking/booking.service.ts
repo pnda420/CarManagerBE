@@ -1,0 +1,220 @@
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
+import { BookingSlot } from './booking-slots.entity';
+import { Booking, BookingStatus } from './bookings.entity';
+import { CreateBookingSlotDto, UpdateBookingSlotDto, CreateBookingDto, UpdateBookingDto } from './booking.dto';
+import { EmailService } from 'src/email/email.service';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class BookingService {
+  constructor(
+    @InjectRepository(BookingSlot)
+    private readonly slotRepo: Repository<BookingSlot>,
+    @InjectRepository(Booking)
+    private readonly bookingRepo: Repository<Booking>,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  // ==================== SLOTS (ADMIN) ====================
+
+  async createSlot(dto: CreateBookingSlotDto): Promise<BookingSlot> {
+    // Validierung: timeFrom < timeTo
+    if (dto.timeFrom >= dto.timeTo) {
+      throw new BadRequestException('timeFrom must be before timeTo');
+    }
+
+    const slot = this.slotRepo.create({
+      ...dto,
+      maxBookings: dto.maxBookings || 1,
+      isAvailable: dto.isAvailable !== false,
+    });
+
+    return this.slotRepo.save(slot);
+  }
+
+  async createMultipleSlots(slots: CreateBookingSlotDto[]): Promise<BookingSlot[]> {
+    const created = slots.map(dto => {
+      if (dto.timeFrom >= dto.timeTo) {
+        throw new BadRequestException(`Invalid time range for ${dto.date} ${dto.timeFrom}-${dto.timeTo}`);
+      }
+      return this.slotRepo.create({
+        ...dto,
+        maxBookings: dto.maxBookings || 1,
+        isAvailable: dto.isAvailable !== false,
+      });
+    });
+
+    return this.slotRepo.save(created);
+  }
+
+  async getAllSlots(): Promise<BookingSlot[]> {
+    return this.slotRepo.find({
+      order: { date: 'ASC', timeFrom: 'ASC' },
+    });
+  }
+
+  async getAvailableSlots(fromDate?: string): Promise<BookingSlot[]> {
+    const today = fromDate || new Date().toISOString().split('T')[0];
+    
+    return this.slotRepo.find({
+      where: {
+        date: MoreThanOrEqual(today),
+        isAvailable: true,
+      },
+      order: { date: 'ASC', timeFrom: 'ASC' },
+    });
+  }
+
+  async getSlotsByDate(date: string): Promise<BookingSlot[]> {
+    return this.slotRepo.find({
+      where: { date },
+      order: { timeFrom: 'ASC' },
+    });
+  }
+
+  async updateSlot(id: string, dto: UpdateBookingSlotDto): Promise<BookingSlot> {
+    const slot = await this.slotRepo.findOne({ where: { id } });
+    if (!slot) {
+      throw new NotFoundException(`Slot with ID ${id} not found`);
+    }
+
+    if (dto.timeFrom && dto.timeTo && dto.timeFrom >= dto.timeTo) {
+      throw new BadRequestException('timeFrom must be before timeTo');
+    }
+
+    Object.assign(slot, dto);
+    return this.slotRepo.save(slot);
+  }
+
+  async deleteSlot(id: string): Promise<void> {
+    const result = await this.slotRepo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Slot with ID ${id} not found`);
+    }
+  }
+
+  // ==================== BOOKINGS ====================
+
+  async createBooking(dto: CreateBookingDto): Promise<Booking> {
+    const slot = await this.slotRepo.findOne({ where: { id: dto.slotId } });
+
+    if (!slot) {
+      throw new NotFoundException('Slot not found');
+    }
+
+    if (!slot.isAvailable) {
+      throw new ConflictException('This slot is not available');
+    }
+
+    if (slot.currentBookings >= slot.maxBookings) {
+      throw new ConflictException('This slot is fully booked');
+    }
+
+    // Booking erstellen
+    const booking = this.bookingRepo.create(dto);
+    const saved = await this.bookingRepo.save(booking);
+
+    // Slot-Counter erhöhen
+    slot.currentBookings += 1;
+    if (slot.currentBookings >= slot.maxBookings) {
+      slot.isAvailable = false;
+    }
+    await this.slotRepo.save(slot);
+
+    // Emails senden
+    await this.sendBookingEmails(saved, slot);
+
+    return saved;
+  }
+
+  private async sendBookingEmails(booking: Booking, slot: BookingSlot): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+
+    // Email an Customer
+    await this.emailService.sendBookingConfirmation({
+      to: booking.email,
+      customerName: booking.name,
+      date: slot.date,
+      timeFrom: slot.timeFrom,
+      timeTo: slot.timeTo,
+      bookingId: booking.id,
+    });
+
+    // Email an Admin
+    if (adminEmail) {
+      await this.emailService.sendBookingNotificationToAdmin({
+        to: adminEmail,
+        customerName: booking.name,
+        customerEmail: booking.email,
+        customerPhone: booking.phone,
+        message: booking.message,
+        date: slot.date,
+        timeFrom: slot.timeFrom,
+        timeTo: slot.timeTo,
+        bookingId: booking.id,
+      });
+    }
+  }
+
+  async getAllBookings(): Promise<Booking[]> {
+    return this.bookingRepo.find({
+      relations: ['slot'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getBookingById(id: string): Promise<Booking> {
+    const booking = await this.bookingRepo.findOne({
+      where: { id },
+      relations: ['slot'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${id} not found`);
+    }
+
+    return booking;
+  }
+
+  async updateBooking(id: string, dto: UpdateBookingDto): Promise<Booking> {
+    const booking = await this.getBookingById(id);
+    Object.assign(booking, dto);
+    return this.bookingRepo.save(booking);
+  }
+
+  async cancelBooking(id: string): Promise<Booking> {
+    const booking = await this.getBookingById(id);
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Booking is already cancelled');
+    }
+
+    // Slot freigeben
+    const slot = await this.slotRepo.findOne({ where: { id: booking.slotId } });
+    if (slot) {
+      slot.currentBookings = Math.max(0, slot.currentBookings - 1);
+      slot.isAvailable = true;
+      await this.slotRepo.save(slot);
+    }
+
+    booking.status = BookingStatus.CANCELLED;
+    return this.bookingRepo.save(booking);
+  }
+
+  async deleteBooking(id: string): Promise<void> {
+    const booking = await this.getBookingById(id);
+
+    // Slot freigeben
+    const slot = await this.slotRepo.findOne({ where: { id: booking.slotId } });
+    if (slot) {
+      slot.currentBookings = Math.max(0, slot.currentBookings - 1);
+      slot.isAvailable = true;
+      await this.slotRepo.save(slot);
+    }
+
+    await this.bookingRepo.delete(id);
+  }
+}

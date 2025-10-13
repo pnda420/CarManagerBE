@@ -153,8 +153,6 @@ Wir hoffen, dass das Ergebnis Ihren Erwartungen entspricht. Bei Fragen oder Änd
         await this.sendEmail(emailParams);
     }
 
-    // email.service.ts (Ergänzung in der Klasse EmailService)
-
     async sendWebsiteReadyEmail(data: {
         to: string;
         projectName: string;
@@ -234,6 +232,113 @@ Wir entschuldigen uns für die Unannehmlichkeiten und helfen dir gerne weiter!`,
             company_email: this.configService.get<string>('COMPANY_EMAIL'),
             company_website: this.configService.get<string>('COMPANY_WEBSITE'),
             footer_note: 'Bei Fragen stehen wir dir jederzeit zur Verfügung.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendBookingConfirmation(data: {
+        to: string;
+        customerName: string;
+        date: string;
+        timeFrom: string;
+        timeTo: string;
+        bookingId: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Booking Confirmation würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            this.logger.log(`   Name: ${data.customerName}`);
+            this.logger.log(`   Datum: ${data.date}`);
+            this.logger.log(`   Zeit: ${data.timeFrom} - ${data.timeTo}`);
+            return;
+        }
+
+        const formattedDate = new Date(data.date).toLocaleDateString('de-DE', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: '✅ Dein Termin wurde gebucht!',
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hallo',
+            customer_name: data.customerName,
+            message: `Perfekt! Dein Termin wurde erfolgreich gebucht.
+
+Hier sind deine Termin-Details:
+📅 ${formattedDate}
+🕐 ${data.timeFrom} - ${data.timeTo} Uhr
+⏱️ 30 Minuten
+💻 Online per Video-Call
+
+Den Video-Call Link bekommst du 30 Minuten vor dem Termin per E-Mail.
+
+Wir freuen uns auf das Gespräch mit dir!`,
+            highlight_message: '🎉 Dein Termin ist bestätigt!',
+            button_url: `${this.configService.get<string>('FRONTEND_URL')}/booking/${data.bookingId}`,
+            button_text: 'Termin-Details ansehen',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Falls du den Termin absagen musst, kontaktiere uns bitte rechtzeitig.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendBookingNotificationToAdmin(data: {
+        to: string;
+        customerName: string;
+        customerEmail: string;
+        customerPhone: string | null;
+        message: string | null;
+        date: string;
+        timeFrom: string;
+        timeTo: string;
+        bookingId: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Admin Booking Notification würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            this.logger.log(`   Kunde: ${data.customerName} (${data.customerEmail})`);
+            this.logger.log(`   Termin: ${data.date} ${data.timeFrom}-${data.timeTo}`);
+            return;
+        }
+
+        const formattedDate = new Date(data.date).toLocaleDateString('de-DE', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: '🔔 Neue Termin-Buchung',
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hey',
+            customer_name: 'Admin',
+            message: `Es gibt eine neue Termin-Buchung!
+
+Kunden-Details:
+👤 Name: ${data.customerName}
+📧 Email: ${data.customerEmail}
+📞 Telefon: ${data.customerPhone || 'Nicht angegeben'}
+
+Termin:
+📅 ${formattedDate}
+🕐 ${data.timeFrom} - ${data.timeTo} Uhr
+
+Nachricht vom Kunden:
+${data.message || 'Keine Nachricht hinterlassen'}`,
+            highlight_message: '📋 Neue Buchung eingegangen',
+            button_url: `${this.configService.get<string>('FRONTEND_URL')}/admin/bookings/${data.bookingId}`,
+            button_text: 'Booking verwalten',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
         };
 
         await this.sendEmail(emailParams);

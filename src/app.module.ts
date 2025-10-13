@@ -11,6 +11,9 @@ import { User } from './users/users.entity';
 import { AuthModule } from './auth/auth.module';
 import { PageAiModule } from './page-ai/page-ai.module';
 import { EmailModule } from './email/email.module';
+import { BookingModule } from './booking/booking.module';
+import { BookingSlot } from './booking/booking-slots.entity';
+import { Booking } from './booking/bookings.entity';
 
 @Module({
   imports: [
@@ -22,7 +25,7 @@ import { EmailModule } from './email/email.module';
       username: process.env.DB_USER ?? 'app',
       password: process.env.DB_PASS ?? 'secret',
       database: process.env.DB_NAME ?? 'appdb',
-      entities: [User, GeneratedPage, ContactRequest],
+      entities: [User, GeneratedPage, ContactRequest, BookingSlot, Booking],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
@@ -33,6 +36,7 @@ import { EmailModule } from './email/email.module';
     ContactRequestsModule,
     PageAiModule,
     EmailModule,
+    BookingModule,
   ],
 })
 export class AppModule { }
