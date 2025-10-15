@@ -16,7 +16,7 @@ export class BookingService {
     private readonly bookingRepo: Repository<Booking>,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // ==================== SLOTS (ADMIN) ====================
 
@@ -56,17 +56,21 @@ export class BookingService {
     });
   }
 
+  toLocalYMD(date = new Date()): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   async getAvailableSlots(fromDate?: string): Promise<BookingSlot[]> {
-    const today = fromDate || new Date().toISOString().split('T')[0];
-    
+    const today = fromDate || this.toLocalYMD(); // statt new Date().toISOString().split('T')[0]
     return this.slotRepo.find({
-      where: {
-        date: MoreThanOrEqual(today),
-        isAvailable: true,
-      },
+      where: { date: MoreThanOrEqual(today), isAvailable: true },
       order: { date: 'ASC', timeFrom: 'ASC' },
     });
   }
+
 
   async getSlotsByDate(date: string): Promise<BookingSlot[]> {
     return this.slotRepo.find({
