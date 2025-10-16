@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import emailjs from '@emailjs/nodejs';
 
 // Toggle hier: true = wirklich senden, false = nur console.log
-const SEND_REAL_EMAILS = false
+const SEND_REAL_EMAILS = true;
 
 interface EmailParams extends Record<string, unknown> {
     to_email: string;
@@ -37,6 +37,11 @@ export class EmailService {
         if (!SEND_REAL_EMAILS) {
             this.logger.warn('⚠️  EMAIL SERVICE IM MOCK MODE - Emails werden nur geloggt!');
         }
+    }
+
+    formatTimeFromHHMMSStoHHMM(time: string): string {
+        const [hours, minutes] = time.split(':');
+        return `${hours}:${minutes}`;
     }
 
     async sendEmail(params: EmailParams): Promise<void> {
@@ -244,13 +249,12 @@ Wir entschuldigen uns für die Unannehmlichkeiten und helfen dir gerne weiter!`,
         timeFrom: string;
         timeTo: string;
         bookingId: string;
+        meetLink?: string;
     }): Promise<void> {
         if (!SEND_REAL_EMAILS) {
             this.logger.log('📧 [MOCK] Booking Confirmation würde gesendet werden:');
             this.logger.log(`   An: ${data.to}`);
-            this.logger.log(`   Name: ${data.customerName}`);
-            this.logger.log(`   Datum: ${data.date}`);
-            this.logger.log(`   Zeit: ${data.timeFrom} - ${data.timeTo}`);
+            this.logger.log(`   Meet Link: ${data.meetLink}`);
             return;
         }
 
@@ -271,16 +275,11 @@ Wir entschuldigen uns für die Unannehmlichkeiten und helfen dir gerne weiter!`,
 
 Hier sind deine Termin-Details:
 📅 ${formattedDate}
-🕐 ${data.timeFrom} - ${data.timeTo} Uhr
-⏱️ 30 Minuten
-💻 Online per Video-Call
-
-Den Video-Call Link bekommst du 30 Minuten vor dem Termin per E-Mail.
-
-Wir freuen uns auf das Gespräch mit dir!`,
-            highlight_message: '🎉 Dein Termin ist bestätigt!',
-            button_url: `${this.configService.get<string>('FRONTEND_URL')}/booking/${data.bookingId}`,
-            button_text: 'Termin-Details ansehen',
+🕐 ${this.formatTimeFromHHMMSStoHHMM(data.timeFrom)} - ${this.formatTimeFromHHMMSStoHHMM(data.timeTo)} Uhr
+💻 Online per Google Meet`,
+            highlight_message: '🎉 Wir freuen uns auf das Gespräch mit dir!',
+            button_url: data.meetLink || `${this.configService.get<string>('FRONTEND_URL')}/booking/${data.bookingId}`,
+            button_text: data.meetLink ? '🎥 Zum Google Meet' : 'Termin-Details ansehen',
             company_email: this.configService.get<string>('COMPANY_EMAIL'),
             company_website: this.configService.get<string>('COMPANY_WEBSITE'),
             footer_note: 'Falls du den Termin absagen musst, kontaktiere uns bitte rechtzeitig.',
@@ -299,12 +298,14 @@ Wir freuen uns auf das Gespräch mit dir!`,
         timeFrom: string;
         timeTo: string;
         bookingId: string;
+        meetLink?: string;
     }): Promise<void> {
         if (!SEND_REAL_EMAILS) {
             this.logger.log('📧 [MOCK] Admin Booking Notification würde gesendet werden:');
             this.logger.log(`   An: ${data.to}`);
             this.logger.log(`   Kunde: ${data.customerName} (${data.customerEmail})`);
             this.logger.log(`   Termin: ${data.date} ${data.timeFrom}-${data.timeTo}`);
+            this.logger.log(`   Meet Link: ${data.meetLink || 'Nicht vorhanden'}`);
             return;
         }
 
@@ -330,19 +331,84 @@ Kunden-Details:
 
 Termin:
 📅 ${formattedDate}
-🕐 ${data.timeFrom} - ${data.timeTo} Uhr
+🕐 ${this.formatTimeFromHHMMSStoHHMM(data.timeFrom)} - ${this.formatTimeFromHHMMSStoHHMM(data.timeTo)} Uhr
+${data.meetLink ? `🔗 Google Meet: ${data.meetLink}` : '⚠️ Kein Meet-Link verfügbar'}
 
 Nachricht vom Kunden:
 ${data.message || 'Keine Nachricht hinterlassen'}`,
             highlight_message: '📋 Neue Buchung eingegangen',
-            button_url: `${this.configService.get<string>('FRONTEND_URL')}/admin/bookings/${data.bookingId}`,
-            button_text: 'Booking verwalten',
+            button_url: data.meetLink || `${this.configService.get<string>('FRONTEND_URL')}/admin/bookings/${data.bookingId}`,
+            button_text: data.meetLink ? '🎥 Zum Google Meet' : 'Booking verwalten',
             company_email: this.configService.get<string>('COMPANY_EMAIL'),
             company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: data.meetLink ? 'Der Meeting-Link wurde auch an den Kunden gesendet.' : undefined,
         };
 
         await this.sendEmail(emailParams);
     }
 
+    // Newsletter abbestellen (PUBLIC)
+    // DELETE http://localhost:3000/newsletter/unsubscribe?email=user@example.com
+    async sendNewsletterWelcome(data: {
+        to: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Newsletter Welcome Email würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            return;
+        }
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: '✅ Anmeldung bestätigt',
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hallo',
+            customer_name: '',
+            message: `Danke für deine Anmeldung!
+
+Du erhältst ab sofort Updates zu neuen Projekten, Features und Angeboten.
+
+Wir melden uns bald mit spannenden News!`,
+            highlight_message: '📬 Du bist jetzt dabei!',
+            button_url: this.configService.get<string>('COMPANY_WEBSITE'),
+            button_text: 'Zur Website',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Du kannst dich jederzeit wieder abmelden.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendNewsletterUnsubscribe(data: {
+        to: string;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Newsletter Unsubscribe Email würde gesendet werden:');
+            this.logger.log(`   An: ${data.to}`);
+            return;
+        }
+
+        const emailParams: EmailParams = {
+            to_email: data.to,
+            subject: '👋 Abmeldung bestätigt',
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hallo',
+            customer_name: '',
+            message: `Du wurdest erfolgreich von unseren Updates abgemeldet.
+
+Schade, dass du gehst! Falls du deine Meinung änderst, kannst du dich jederzeit wieder anmelden.
+
+Wir wünschen dir alles Gute!`,
+            highlight_message: '✓ Abmeldung erfolgreich',
+            button_url: this.configService.get<string>('COMPANY_WEBSITE'),
+            button_text: 'Zur Website',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: 'Du erhältst keine weiteren E-Mails von uns.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
 
 }

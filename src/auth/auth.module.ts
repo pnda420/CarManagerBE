@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from 'src/users/users.entity';
+import { GoogleAuthController } from 'src/booking/google-auth.controller';
 
 
 @Module({
@@ -17,7 +18,7 @@ import { User } from 'src/users/users.entity';
             signOptions: { expiresIn: '7d' },
         }),
     ],
-    controllers: [AuthController],
+    controllers: [AuthController, GoogleAuthController],
     providers: [AuthService, JwtStrategy],
     exports: [AuthService],
 })

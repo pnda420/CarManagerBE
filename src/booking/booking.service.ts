@@ -6,6 +6,7 @@ import { Booking, BookingStatus } from './bookings.entity';
 import { CreateBookingSlotDto, UpdateBookingSlotDto, CreateBookingDto, UpdateBookingDto } from './booking.dto';
 import { EmailService } from 'src/email/email.service';
 import { ConfigService } from '@nestjs/config';
+import { GoogleCalendarService } from './google-calendar.service';
 
 @Injectable()
 export class BookingService {
@@ -16,6 +17,7 @@ export class BookingService {
     private readonly bookingRepo: Repository<Booking>,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly googleCalendarService: GoogleCalendarService,
   ) { }
 
   // ==================== SLOTS (ADMIN) ====================
@@ -121,6 +123,39 @@ export class BookingService {
     const booking = this.bookingRepo.create(dto);
     const saved = await this.bookingRepo.save(booking);
 
+    // Google Meet erstellen
+    try {
+      // DateTime richtig formatieren
+      const startDateTime = `${slot.date}T${slot.timeFrom}+02:00`;
+      const endDateTime = `${slot.date}T${slot.timeTo}+02:00`;
+
+      console.log('🕐 DateTime Debug:');
+      console.log('   slot.date:', slot.date);
+      console.log('   slot.timeFrom:', slot.timeFrom);
+      console.log('   slot.timeTo:', slot.timeTo);
+      console.log('   startDateTime:', startDateTime);
+      console.log('   endDateTime:', endDateTime);
+
+      const meetData = await this.googleCalendarService.createMeeting({
+        summary: `Beratungsgespräch für ${booking.name}`,
+        description: booking.message || 'Beratungstermin',
+        startDateTime,
+        endDateTime,
+        attendees: [booking.email],
+      });
+
+      // Meet Link im Slot speichern
+      slot.googleEventId = meetData.eventId;
+      slot.meetLink = meetData.meetLink;
+
+      console.log('✅ Meet Link gespeichert:', slot.meetLink);
+    } catch (error) {
+      // Fehler loggen, aber Buchung nicht abbrechen
+      console.error('❌ Google Meet konnte nicht erstellt werden:', error);
+      console.error('   Error Details:', error.message);
+      // Booking wird trotzdem gespeichert, nur ohne Meet Link
+    }
+
     // Slot-Counter erhöhen
     slot.currentBookings += 1;
     if (slot.currentBookings >= slot.maxBookings) {
@@ -128,7 +163,7 @@ export class BookingService {
     }
     await this.slotRepo.save(slot);
 
-    // Emails senden
+    // Emails senden (mit Meet Link)
     await this.sendBookingEmails(saved, slot);
 
     return saved;
@@ -145,6 +180,7 @@ export class BookingService {
       timeFrom: slot.timeFrom,
       timeTo: slot.timeTo,
       bookingId: booking.id,
+      meetLink: slot.meetLink,
     });
 
     // Email an Admin
@@ -159,6 +195,7 @@ export class BookingService {
         timeFrom: slot.timeFrom,
         timeTo: slot.timeTo,
         bookingId: booking.id,
+        meetLink: slot.meetLink, // NEU!
       });
     }
   }
@@ -199,6 +236,17 @@ export class BookingService {
     // Slot freigeben
     const slot = await this.slotRepo.findOne({ where: { id: booking.slotId } });
     if (slot) {
+      // Google Meet löschen
+      if (slot.googleEventId) {
+        try {
+          await this.googleCalendarService.deleteMeeting(slot.googleEventId);
+          slot.googleEventId = null;
+          slot.meetLink = null;
+        } catch (error) {
+          console.error('Google Meet konnte nicht gelöscht werden:', error);
+        }
+      }
+
       slot.currentBookings = Math.max(0, slot.currentBookings - 1);
       slot.isAvailable = true;
       await this.slotRepo.save(slot);
@@ -214,6 +262,15 @@ export class BookingService {
     // Slot freigeben
     const slot = await this.slotRepo.findOne({ where: { id: booking.slotId } });
     if (slot) {
+      // Google Meet löschen
+      if (slot.googleEventId) {
+        try {
+          await this.googleCalendarService.deleteMeeting(slot.googleEventId);
+        } catch (error) {
+          console.error('Google Meet konnte nicht gelöscht werden:', error);
+        }
+      }
+
       slot.currentBookings = Math.max(0, slot.currentBookings - 1);
       slot.isAvailable = true;
       await this.slotRepo.save(slot);
@@ -221,4 +278,5 @@ export class BookingService {
 
     await this.bookingRepo.delete(id);
   }
+
 }

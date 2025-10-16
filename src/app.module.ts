@@ -14,6 +14,12 @@ import { EmailModule } from './email/email.module';
 import { BookingModule } from './booking/booking.module';
 import { BookingSlot } from './booking/booking-slots.entity';
 import { Booking } from './booking/bookings.entity';
+import { GoogleCalendarModule } from './booking/google-calendar.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
+import { NewsletterSubscriber } from './newsletter/newsletter.entity';
+
+
+
 
 @Module({
   imports: [
@@ -25,7 +31,7 @@ import { Booking } from './booking/bookings.entity';
       username: process.env.DB_USER ?? 'app',
       password: process.env.DB_PASS ?? 'secret',
       database: process.env.DB_NAME ?? 'appdb',
-      entities: [User, GeneratedPage, ContactRequest, BookingSlot, Booking],
+      entities: [User, GeneratedPage, ContactRequest, BookingSlot, Booking, NewsletterSubscriber],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
@@ -37,6 +43,8 @@ import { Booking } from './booking/bookings.entity';
     PageAiModule,
     EmailModule,
     BookingModule,
+    GoogleCalendarModule,
+    NewsletterModule,
   ],
 })
 export class AppModule { }

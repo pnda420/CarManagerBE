@@ -30,4 +30,10 @@ export class BookingSlot {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  @Column({ nullable: true })
+  googleEventId?: string;
+
+  @Column({ nullable: true })
+  meetLink?: string;
 }
