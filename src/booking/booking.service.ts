@@ -137,7 +137,7 @@ export class BookingService {
       console.log('   endDateTime:', endDateTime);
 
       const meetData = await this.googleCalendarService.createMeeting({
-        summary: `Beratungsgespräch für ${booking.name}`,
+        summary: `Beratungsgespräch LeonardsMedia - ${booking.name}`,
         description: booking.message || 'Beratungstermin',
         startDateTime,
         endDateTime,

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import emailjs from '@emailjs/nodejs';
 
 // Toggle hier: true = wirklich senden, false = nur console.log
-const SEND_REAL_EMAILS = true;
+const SEND_REAL_EMAILS = false;
 
 interface EmailParams extends Record<string, unknown> {
     to_email: string;
