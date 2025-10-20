@@ -6,7 +6,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: '*',
+    origin: ['https://leonardsmedia.de', 'https://www.leonardsmedia.de', 'http://localhost:4200'],
     credentials: true,
   });
 
@@ -16,7 +16,7 @@ async function bootstrap() {
     transform: true,
   }));
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT);
   console.log('🚀 Backend läuft auf http://localhost:3000');
 }
 bootstrap();
