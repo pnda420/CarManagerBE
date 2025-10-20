@@ -16,14 +16,24 @@ export class ContactRequestsService {
   async create(dto: CreateContactRequestDto): Promise<ContactRequest> {
     const request = this.contactRepo.create(dto);
     const saved = await this.contactRepo.save(request);
-  
+
     // Danke-Email an den User schicken
     await this.emailService.sendContactRequestConfirmation({
       userEmail: dto.email,
       userName: dto.name,
       serviceType: dto.serviceType,
     });
-  
+
+    // Admin-Email an den Admin schicken
+    await this.emailService.sendContactRequestConfirmationAdmin({
+      userEmail: dto.email,
+      userName: dto.name,
+      serviceType: dto.serviceType,
+      message: dto.message,
+      phoneNumber: dto.phoneNumber,
+      prefersCallback: dto.prefersCallback,
+    });
+
     return saved;
   }
 

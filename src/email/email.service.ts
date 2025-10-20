@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import emailjs from '@emailjs/nodejs';
 
 // Toggle hier: true = wirklich senden, false = nur console.log
-const SEND_REAL_EMAILS = false;
+const SEND_REAL_EMAILS = true;
 
 interface EmailParams extends Record<string, unknown> {
     to_email: string;
@@ -97,7 +97,7 @@ export class EmailService {
             company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
             greeting: 'Hallo',
             customer_name: data.userName,
-            message: `Vielen Dank für Ihre Anfrage zu unserem Service "${data.serviceType}". 
+            message: `Vielen Dank für Ihre Anfrage! 
     
     Wir haben Ihre Nachricht erhalten und freuen uns über Ihr Interesse. Unser Team wird Ihre Anfrage prüfen und sich schnellstmöglich bei Ihnen melden.
     
@@ -108,6 +108,44 @@ export class EmailService {
             company_email: this.configService.get<string>('COMPANY_EMAIL'),
             company_website: this.configService.get<string>('COMPANY_WEBSITE'),
             footer_note: 'Bei Rückfragen stehen wir Ihnen jederzeit zur Verfügung.',
+        };
+
+        await this.sendEmail(emailParams);
+    }
+
+    async sendContactRequestConfirmationAdmin(data: {
+        userEmail: string;
+        userName: string;
+        serviceType: string;
+        message: string;
+        phoneNumber?: string;
+        prefersCallback: boolean;
+    }): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Admin Contact Request Email würde gesendet werden:');
+            this.logger.log(`   Kunde: ${data.userName} (${data.userEmail})`);
+            this.logger.log(`   Service: ${data.serviceType}`);
+            this.logger.log(`   Rückruf: ${data.prefersCallback ? 'Ja' : 'Nein'}`);
+            return;
+        }
+
+        const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+
+        const emailParams: EmailParams = {
+            to_email: adminEmail,
+            subject: '🔔 Neue Kontaktanfrage',
+            company_name: this.configService.get<string>('COMPANY_NAME', 'LeonardsMedia'),
+            greeting: 'Hey',
+            customer_name: 'Admin',
+            message: data.message,
+            highlight_message: '📋 Neue Anfrage eingegangen',
+            button_url: `mailto:${data.userEmail}`,
+            button_text: '📧 Kunde antworten',
+            company_email: this.configService.get<string>('COMPANY_EMAIL'),
+            company_website: this.configService.get<string>('COMPANY_WEBSITE'),
+            footer_note: data.prefersCallback && data.phoneNumber
+                ? `⚠️ Kunde bevorzugt Rückruf: ${data.phoneNumber}`
+                : undefined,
         };
 
         await this.sendEmail(emailParams);
