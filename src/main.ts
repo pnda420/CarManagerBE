@@ -6,8 +6,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: ['https://leonardsmedia.de', 'https://www.leonardsmedia.de', 'http://localhost:4200'],
+    origin: ['https://leonardsmedia.de', 'http://localhost:4200'],
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization'
   });
 
   app.useGlobalPipes(new ValidationPipe({
