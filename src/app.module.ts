@@ -18,9 +18,6 @@ import { GoogleCalendarModule } from './booking/google-calendar.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { NewsletterSubscriber } from './newsletter/newsletter.entity';
 
-
-
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
