@@ -6,7 +6,7 @@ import { VersioningType } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const allowList = ['http://localhost:4200', 'https://leonardsmedia.de'];
+  const allowList = ['http://localhost:4200', 'https://leonardsmedia.de', 'https://www.leonardsmedia.de'];
   app.enableCors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
