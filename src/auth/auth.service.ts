@@ -24,59 +24,105 @@ export class AuthService {
     return user;
   }
 
-  async login(email: string, password: string) {
-    console.log('🔐 Login-Versuch für:', email);
-    
-    const user = await this.usersService.findByEmail(email);
-    
-    if (!user) {
-      console.log('❌ User nicht gefunden');
-      throw new UnauthorizedException('Invalid credentials');
-    }
+async login(email: string, password: string) {
+  console.log('🔐 Login-Versuch für:', email);
+  console.log('📝 Empfangenes Passwort:', password ? `${password.length} Zeichen` : 'UNDEFINED/NULL');
+  
+  // Validierung
+  if (!email || !password) {
+    console.log('❌ E-Mail oder Passwort fehlt');
+    throw new UnauthorizedException('Email and password are required');
+  }
+  
+  const user = await this.usersService.findByEmail(email);
+  
+  if (!user) {
+    console.log('❌ User nicht gefunden');
+    throw new UnauthorizedException('Invalid credentials');
+  }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    if (!isPasswordValid) {
-      console.log('❌ Passwort falsch');
-      throw new UnauthorizedException('Invalid credentials');
-    }
+  console.log('👤 User gefunden:', user.email);
+  console.log('🔒 User.password vorhanden:', !!user.password);
+  console.log('🔒 User.password Länge:', user.password?.length);
+  console.log('🔒 User.password Anfang:', user.password?.substring(0, 10));
 
-    // WICHTIG: Payload mit 'sub' für userId
-    const payload = {
-      sub: user.id,
+  // WICHTIG: Prüfen ob user.password existiert
+  if (!user.password) {
+    console.log('❌ User hat kein Passwort in DB');
+    throw new UnauthorizedException('Invalid credentials');
+  }
+
+  console.log('🔍 Vergleiche Passwörter...');
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  
+  if (!isPasswordValid) {
+    console.log('❌ Passwort falsch');
+    throw new UnauthorizedException('Invalid credentials');
+  }
+
+  console.log('✅ Passwort korrekt');
+
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    role: user.role
+  };
+
+  const access_token = this.jwtService.sign(payload);
+  
+  console.log('✅ Token erstellt für User:', user.id);
+
+  return {
+    access_token,
+    user: {
+      id: user.id,
       email: user.email,
-      role: user.role
-    };
+      name: user.name,
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    },
+  };
+}
 
-    const access_token = this.jwtService.sign(payload);
-    
-    console.log('✅ Token erstellt für User:', user.id);
-    console.log('📦 Payload:', payload);
+async register(email: string, name: string, password: string) {
+  console.log('📝 Registrierung für:', email);
+  
+  // Passwort hashen
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // User erstellen
+  const user = await this.usersService.create({
+    email,
+    name,
+    password: hashedPassword,
+  });
 
-    return {
-      access_token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
-    };
-  }
+  console.log('✅ User erstellt:', user.id);
 
-  async register(email: string, name: string, password: string) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const user = await this.usersService.create({
-      email,
-      name,
-      password: hashedPassword,
-    });
+  // Token direkt erstellen (NICHT login() aufrufen!)
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    role: user.role
+  };
 
-    // Nach Registration automatisch einloggen
-    return this.login(email, password);
-  }
+  const access_token = this.jwtService.sign(payload);
+  
+  console.log('✅ Token erstellt für neuen User:', user.id);
+
+  return {
+    access_token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    },
+  };
+}
 }

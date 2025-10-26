@@ -29,9 +29,27 @@ export class CarsService {
     });
   }
 
+  async getAll(): Promise<Car[]> {
+    return this.carRepo.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findOne(id: string, userId: string): Promise<Car> {
     const car = await this.carRepo.findOne({
       where: { id, userId },
+    });
+
+    if (!car) {
+      throw new NotFoundException(`Car with ID ${id} not found`);
+    }
+
+    return car;
+  }
+
+  async findOneGlobal(id: string): Promise<Car> {
+    const car = await this.carRepo.findOne({
+      where: { id },
     });
 
     if (!car) {

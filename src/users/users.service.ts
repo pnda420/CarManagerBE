@@ -22,13 +22,9 @@ export class UsersService {
             throw new ConflictException('Email already exists');
         }
 
-        // Passwort hashen
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-        const user = this.userRepo.create({
-            ...dto,
-            password: hashedPassword,
-        });
+        // WICHTIG: Passwort wird bereits im AuthService gehasht
+        // Hier NICHT nochmal hashen!
+        const user = this.userRepo.create(dto);
 
         const savedUser = await this.userRepo.save(user);
 
@@ -40,7 +36,7 @@ export class UsersService {
     async findAll(): Promise<User[]> {
         const users = await this.userRepo.find({
             order: { createdAt: 'DESC' },
-            select: ['id', 'email', 'name', , 'isVerified', 'createdAt', 'updatedAt', 'role',],
+            select: ['id', 'email', 'name', 'role', 'isVerified', 'createdAt', 'updatedAt'], // Doppeltes Komma entfernt
         });
         return users;
     }
@@ -48,7 +44,7 @@ export class UsersService {
     async findOne(id: string): Promise<User> {
         const user = await this.userRepo.findOne({
             where: { id },
-            select: ['id', 'email', 'name', 'isVerified', 'createdAt', 'updatedAt', 'role',],
+            select: ['id', 'email', 'name', 'role', 'isVerified', 'createdAt', 'updatedAt'],
         });
 
         if (!user) {
@@ -58,8 +54,13 @@ export class UsersService {
         return user;
     }
 
+    // ✅ HIER IST DIE LÖSUNG: Passwort explizit mit laden
     async findByEmail(email: string): Promise<User | null> {
-        return this.userRepo.findOne({ where: { email } });
+        return this.userRepo
+            .createQueryBuilder('user')
+            .where('user.email = :email', { email })
+            .addSelect('user.password') // ← Passwort explizit laden
+            .getOne();
     }
 
     async update(id: string, dto: UpdateUserDto): Promise<User> {
@@ -67,6 +68,11 @@ export class UsersService {
 
         if (!user) {
             throw new NotFoundException(`User with ID ${id} not found`);
+        }
+
+        // Wenn Passwort geändert wird, hashen
+        if (dto.password) {
+            dto.password = await bcrypt.hash(dto.password, 10);
         }
 
         Object.assign(user, dto);
@@ -82,8 +88,10 @@ export class UsersService {
         }
     }
 
+    // Diese Methoden werden nicht mehr gebraucht (AuthService übernimmt das)
+    // Aber lasse sie zur Kompatibilität drin
     async validateUser(email: string, password: string): Promise<User> {
-        const user = await this.userRepo.findOne({ where: { email } });
+        const user = await this.findByEmail(email); // Nutzt jetzt die korrigierte Methode
 
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
