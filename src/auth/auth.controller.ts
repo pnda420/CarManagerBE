@@ -1,46 +1,45 @@
+// auth/auth.controller.ts
 import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { IsEmail, IsString, MinLength } from 'class-validator';
-
-export class RegisterDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(2)
-  name: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-}
-
-export class LoginDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  password: string;
-}
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.name, dto.password);
+  async register(
+    @Body('email') email: string,
+    @Body('name') name: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.register(email, name, password);
   }
 
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  async login(
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.login(email, password);
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req) {
+  async getMe(@Request() req) {
+    console.log('📍 /auth/me aufgerufen');
+    console.log('👤 req.user:', req.user);
+    
     return req.user;
+  }
+
+  @Get('test')
+  @UseGuards(JwtAuthGuard)
+  async test(@Request() req) {
+    return {
+      message: 'Auth funktioniert!',
+      user: req.user,
+      timestamp: new Date().toISOString()
+    };
   }
 }

@@ -1,126 +1,82 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+// auth/auth.service.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
-import { UserRole, User } from 'src/users/users.entity';
-
-
-export interface JwtPayload {
-    sub: string;
-    email: string;
-    role: UserRole;
-    createdAt: Date;
-}
-
-export interface LoginResponse {
-    access_token: string;
-    user: {
-        id: string;
-        email: string;
-        name: string;
-        role: UserRole;
-        createdAt: Date;
-    };
-}
 
 @Injectable()
 export class AuthService {
-    constructor(
-        @InjectRepository(User)
-        private userRepo: Repository<User>,
-        private jwtService: JwtService,
-    ) { }
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+  ) {}
 
-    async register(email: string, name: string, password: string): Promise<LoginResponse> {
-        // 1) Eingaben prüfen
-        if (!email || !password) {
-            throw new UnauthorizedException('Email and password are required');
-        }
-        email = email.trim().toLowerCase();
+  async validateUser(userId: string) {
+    console.log('🔍 validateUser aufgerufen mit ID:', userId);
+    const user = await this.usersService.findOne(userId);
+    
+    if (!user) {
+      console.log('❌ User nicht gefunden');
+      return null;
+    }
+    
+    console.log('✅ User gefunden:', user.email);
+    return user;
+  }
 
-        // 2) Existenz prüfen (bei CITEXT ist das case-insensitive)
-        const existing = await this.userRepo.findOne({ where: { email } });
-        if (existing) {
-            throw new ConflictException('Email already exists');
-        }
-
-        // 3) Passwort hashen
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // 4) User speichern
-        const user = this.userRepo.create({
-            email,
-            name,
-            password: hashedPassword,
-            role: UserRole.USER,
-        });
-        const savedUser = await this.userRepo.save(user);
-
-        // 5) Token zurückgeben
-        return this.generateToken(savedUser);
+  async login(email: string, password: string) {
+    console.log('🔐 Login-Versuch für:', email);
+    
+    const user = await this.usersService.findByEmail(email);
+    
+    if (!user) {
+      console.log('❌ User nicht gefunden');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async login(email: string, password: string): Promise<LoginResponse> {
-        // 1) Eingaben prüfen
-        if (!email || !password) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-        email = email.trim().toLowerCase();
-
-        // 2) User inkl. Passwort laden (wichtig!)
-        // Funktioniert egal ob @Column({ select: false }) gesetzt ist oder nicht
-        const user = await this.userRepo
-            .createQueryBuilder('user')
-            .addSelect('user.password')
-            .where('LOWER(user.email) = :email', { email }) // falls Spalte kein CITEXT ist
-            .getOne();
-
-        if (!user || !user.password) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        // 3) Passwort prüfen
-        const ok = await bcrypt.compare(password, user.password);
-        if (!ok) {
-            throw new UnauthorizedException('Invalid credentials');
-        }
-
-        // 4) Token
-        return this.generateToken(user);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      console.log('❌ Passwort falsch');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    async validateUser(userId: string): Promise<User | null> {
-        return this.userRepo.findOne({
-            where: { id: userId },
-            select: ['id', 'email', 'name', 'role', 'wantsNewsletter', 'isVerified', 'createdAt']
-        });
-    }
+    // WICHTIG: Payload mit 'sub' für userId
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    };
 
-    // In auth.service.ts - generateToken()
-    private generateToken(user: User): LoginResponse {
-        const payload: JwtPayload = {
-            sub: user.id,
-            email: user.email,
-            role: user.role,
-            createdAt: user.createdAt,
-        };
+    const access_token = this.jwtService.sign(payload);
+    
+    console.log('✅ Token erstellt für User:', user.id);
+    console.log('📦 Payload:', payload);
 
-        console.log('🎫 Generiere neuen Token mit Secret:', process.env.JWT_SECRET);
-        console.log('📦 Payload:', payload);
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+    };
+  }
 
-        const token = this.jwtService.sign(payload);
-        console.log('✅ Token erstellt:', token.substring(0, 50) + '...');
+  async register(email: string, name: string, password: string) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = await this.usersService.create({
+      email,
+      name,
+      password: hashedPassword,
+    });
 
-        return {
-            access_token: token,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                createdAt: user.createdAt,
-            },
-        };
-    }
+    // Nach Registration automatisch einloggen
+    return this.login(email, password);
+  }
 }

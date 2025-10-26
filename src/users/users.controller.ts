@@ -11,7 +11,7 @@ import {
     UseGuards 
   } from '@nestjs/common';
   import { UsersService } from './users.service';
-import { CreateUserDto, LoginDto, NewsletterSubscribeDto, UpdateUserDto } from './users.dto';
+import { CreateUserDto, LoginDto, UpdateUserDto } from './users.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
   
@@ -39,41 +39,6 @@ import { AdminGuard } from 'src/auth/guards/admin.guard';
       };
     }
   
-    // Newsletter Routen (öffentlich)
-    
-    @Post('newsletter/subscribe')
-    @HttpCode(HttpStatus.OK)
-    async subscribeNewsletter(@Body() dto: NewsletterSubscribeDto) {
-      return this.usersService.subscribeNewsletter(dto);
-    }
-  
-    @Post('newsletter/unsubscribe')
-    @HttpCode(HttpStatus.OK)
-    async unsubscribeNewsletter(@Body() body: { email: string }) {
-      return this.usersService.unsubscribeNewsletter(body.email);
-    }
-  
-    // Admin Routen (später mit Auth Guard schützen!)
-    // @UseGuards(AdminGuard)
-    @Get('newsletter/subscribers')
-    async getNewsletterSubscribers() {
-      return this.usersService.getNewsletterSubscribers();
-    }
-  
-    // @UseGuards(AdminGuard)
-    @Get('stats')
-    async getStats() {
-      const totalUsers = await this.usersService.count();
-      const newsletterSubscribers = await this.usersService.countNewsletterSubscribers();
-      
-      return {
-        totalUsers,
-        newsletterSubscribers,
-        subscriberRate: totalUsers > 0 
-          ? Math.round((newsletterSubscribers / totalUsers) * 100) 
-          : 0,
-      };
-    }
   
     // User Management Routen
     // Später: nur Admin oder der User selbst darf zugreifen

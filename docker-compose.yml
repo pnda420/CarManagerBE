@@ -1,17 +1,17 @@
 services:
   db:
     image: postgres:16
-    container_name: app_db
+    container_name: car_manager_db
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: secret
-      POSTGRES_DB: appdb
+      POSTGRES_DB: db_car_manager
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      test: ["CMD-SHELL", "pg_isready -U app -d db_car_manager"]
       interval: 5s
       timeout: 3s
       retries: 10

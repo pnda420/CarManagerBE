@@ -3,20 +3,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
-import { GeneratedPagesModule } from './generated-pages/generated-pages.module';
-import { ContactRequestsModule } from './contact-requests/contact-requests.module';
-import { ContactRequest } from './contact-requests/contact-requests.entity';
-import { GeneratedPage } from './generated-pages/generated-pages.entity';
 import { User } from './users/users.entity';
 import { AuthModule } from './auth/auth.module';
-import { PageAiModule } from './page-ai/page-ai.module';
 import { EmailModule } from './email/email.module';
-import { BookingModule } from './booking/booking.module';
-import { BookingSlot } from './booking/booking-slots.entity';
-import { Booking } from './booking/bookings.entity';
-import { GoogleCalendarModule } from './booking/google-calendar.module';
-import { NewsletterModule } from './newsletter/newsletter.module';
-import { NewsletterSubscriber } from './newsletter/newsletter.entity';
+import { TuningModule } from './tuning/tuning.module';
+import { CarsModule } from './cars/cars.module';
+import { Car } from './cars/cars.entity';
+import { TuningGroup } from './tuning/tuning-group.entity';
+import { TuningPart } from './tuning/tuning-part.entity';
 
 @Module({
   imports: [
@@ -24,24 +18,20 @@ import { NewsletterSubscriber } from './newsletter/newsletter.entity';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST ?? 'localhost',
-      port: parseInt(process.env.DB_PORT ?? '5432', 10),
-      username: process.env.DB_USER ?? 'app',
-      password: process.env.DB_PASS ?? 'secret',
-      database: process.env.DB_NAME ?? 'appdb',
-      entities: [User, GeneratedPage, ContactRequest, BookingSlot, Booking, NewsletterSubscriber],
+      port: 5432,
+      username: 'app' ,
+      password: 'secret' ,
+      database: 'db_car_manager' ,
+      entities: [User, Car, TuningGroup, TuningPart],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
     UsersModule,
     AuthModule,
-    GeneratedPagesModule,
-    ContactRequestsModule,
-    PageAiModule,
     EmailModule,
-    BookingModule,
-    GoogleCalendarModule,
-    NewsletterModule,
+    TuningModule,
+    CarsModule,
   ],
 })
 export class AppModule { }

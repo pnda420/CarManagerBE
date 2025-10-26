@@ -22,10 +22,6 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   name?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  wantsNewsletter?: boolean;
 }
 
 export class LoginDto {
@@ -34,13 +30,4 @@ export class LoginDto {
 
   @IsString()
   password: string;
-}
-
-export class NewsletterSubscribeDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @IsOptional()
-  name?: string;
 }
