@@ -10,7 +10,7 @@ export class CarsService {
   constructor(
     @InjectRepository(Car)
     private readonly carRepo: Repository<Car>,
-  ) {}
+  ) { }
 
   async create(userId: string, dto: CreateCarDto): Promise<Car> {
     const car = this.carRepo.create({
@@ -60,15 +60,30 @@ export class CarsService {
   }
 
   async update(id: string, userId: string, dto: UpdateCarDto): Promise<Car> {
+  console.log('=== DEBUG START ===');
+  console.log('DTO received:', JSON.stringify(dto, null, 2));
+  console.log('DTO keys:', Object.keys(dto));
+  console.log('Has images property:', dto.hasOwnProperty('images'));
+  console.log('Images value:', dto.images);
+  console.log('Images type:', typeof dto.images);
+  console.log('=== DEBUG END ===');
+
     const car = await this.findOne(id, userId);
+
+    // Explicitly handle images array
+    const updateData: any = { ...dto };
+
+    // If images is explicitly sent (even if empty), update it
+    if (dto.hasOwnProperty('images')) {
+      updateData.images = dto.images || [];
+    }
 
     // Update mileageUpdatedAt if mileage changed
     if (dto.mileageKm !== undefined && dto.mileageKm !== car.mileageKm) {
-      Object.assign(car, dto, { mileageUpdatedAt: new Date() });
-    } else {
-      Object.assign(car, dto);
+      updateData.mileageUpdatedAt = new Date();
     }
 
+    Object.assign(car, updateData);
     return this.carRepo.save(car);
   }
 

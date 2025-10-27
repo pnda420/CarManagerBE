@@ -12,7 +12,7 @@ import {
   IsDateString,
   IsPositive,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export enum FuelType {
   PETROL = 'petrol',
@@ -307,9 +307,15 @@ export class UpdateCarDto {
   @IsOptional()
   consumptionLPer100km?: number;
 
-  @IsArray()
+ @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CarImageDto)
   @IsOptional()
+  @Transform(({ value, obj }) => {
+    if ('images' in obj) {
+      return value;
+    }
+    return undefined;
+  }, { toClassOnly: true })
   images?: CarImageDto[];
 }

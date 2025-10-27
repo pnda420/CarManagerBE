@@ -47,14 +47,20 @@ export class CarsController {
         return this.carsService.findOneGlobal(id);
     }
 
-    @Patch(':id')
-    async update(
-        @Request() req,
-        @Param('id') id: string,
-        @Body() dto: UpdateCarDto,
-    ) {
-        return this.carsService.update(id, req.user.userId, dto);
-    }
+@Patch(':id')
+async update(
+  @Request() req,
+  @Param('id') id: string,
+  @Body() dto: UpdateCarDto,
+) {
+  console.log('=== CONTROLLER DEBUG ===');
+  console.log('Raw body:', req.body);
+  console.log('DTO after validation:', dto);
+  console.log('DTO keys:', Object.keys(dto));
+  console.log('========================');
+  
+  return this.carsService.update(id, req.user.userId, dto);
+}
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)

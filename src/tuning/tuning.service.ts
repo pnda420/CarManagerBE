@@ -1,7 +1,7 @@
 // tuning/tuning.service.ts
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { TuningGroup } from './tuning-group.entity';
 import { TuningPart } from './tuning-part.entity';
 import { CarsService } from '../cars/cars.service';
@@ -45,7 +45,7 @@ export class TuningService {
     await this.carsService.findOne(carId, userId);
 
     return this.groupRepo.find({
-      where: { carId, deletedAt: null },
+      where: { carId, deletedAt: IsNull() },
       order: { orderIndex: 'ASC', createdAt: 'ASC' },
       relations: ['parts'],
     });
@@ -60,7 +60,7 @@ export class TuningService {
     await this.carsService.findOne(carId, userId);
 
     const group = await this.groupRepo.findOne({
-      where: { id: groupId, carId, deletedAt: null },
+      where: { id: groupId, carId, deletedAt: IsNull() },
       relations: ['parts'],
     });
 
@@ -84,9 +84,19 @@ export class TuningService {
 
   async deleteGroup(groupId: string, carId: string, userId: string): Promise<void> {
     const group = await this.findOneGroup(groupId, carId, userId);
-    // Soft delete
+    
+    // Soft delete the group
     group.deletedAt = new Date();
     await this.groupRepo.save(group);
+    
+    // Also soft delete all parts in this group
+    await this.partRepo
+      .createQueryBuilder()
+      .update(TuningPart)
+      .set({ deletedAt: new Date() })
+      .where('groupId = :groupId', { groupId })
+      .andWhere('deletedAt IS NULL')
+      .execute();
   }
 
   // ========== TuningPart Methods ==========
@@ -101,7 +111,7 @@ export class TuningService {
 
     // Verify group belongs to car
     const group = await this.groupRepo.findOne({
-      where: { id: dto.groupId, carId, deletedAt: null },
+      where: { id: dto.groupId, carId, deletedAt: IsNull() },
     });
 
     if (!group) {
@@ -122,7 +132,7 @@ export class TuningService {
     await this.carsService.findOne(carId, userId);
 
     return this.partRepo.find({
-      where: { carId, deletedAt: null },
+      where: { carId, deletedAt: IsNull() },
       order: { orderIndex: 'ASC', createdAt: 'ASC' },
     });
   }
@@ -136,7 +146,7 @@ export class TuningService {
     await this.carsService.findOne(carId, userId);
 
     return this.partRepo.find({
-      where: { groupId, carId, deletedAt: null },
+      where: { groupId, carId, deletedAt: IsNull() },
       order: { orderIndex: 'ASC', createdAt: 'ASC' },
     });
   }
@@ -150,7 +160,7 @@ export class TuningService {
     await this.carsService.findOne(carId, userId);
 
     const part = await this.partRepo.findOne({
-      where: { id: partId, carId, deletedAt: null },
+      where: { id: partId, carId, deletedAt: IsNull() },
     });
 
     if (!part) {

@@ -11,6 +11,7 @@ import { CarsModule } from './cars/cars.module';
 import { Car } from './cars/cars.entity';
 import { TuningGroup } from './tuning/tuning-group.entity';
 import { TuningPart } from './tuning/tuning-part.entity';
+import { ProxyModule } from './proxy/proxy.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { TuningPart } from './tuning/tuning-part.entity';
     EmailModule,
     TuningModule,
     CarsModule,
+    ProxyModule,
   ],
 })
 export class AppModule { }
