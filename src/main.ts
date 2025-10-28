@@ -7,24 +7,20 @@ import * as express from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const allowList = [
-    'http://localhost:4200', 
-    'https://car.xpnda.de', 
-    'https://www.car.xpnda.de', 
-    'http://192.168.178.111:4200'
-  ];
-  
-  app.enableCors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      return allowList.includes(origin) ? cb(null, true) : cb(new Error('CORS'), false);
-    },
-    credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    optionsSuccessStatus: 204,
-  });
+const allowList = [
+  'http://localhost:4200',
+  'https://car.xpnda.de',
+  'https://www.car.xpnda.de',
+  'http://192.168.178.111:4200',
+];
 
+app.enableCors({
+  origin: allowList,
+  credentials: true,
+  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-Requested-With','X-XSRF-TOKEN','Accept','Origin'],
+  optionsSuccessStatus: 204,
+});
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
