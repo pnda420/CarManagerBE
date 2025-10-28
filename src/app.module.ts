@@ -21,7 +21,7 @@ import { AlertSettings } from './alerts-settings/alert-settings.entity';
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST ?? 'localhost',
-      port: 5432,
+      port: 5433,
       username: 'app' ,
       password: 'secret' ,
       database: 'db_car_manager' ,
@@ -29,7 +29,6 @@ import { AlertSettings } from './alerts-settings/alert-settings.entity';
       migrations: ['dist/migrations/*.js'],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
     UsersModule,
     AuthModule,
