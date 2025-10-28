@@ -9,8 +9,8 @@ async function bootstrap() {
 
   const allowList = [
     'http://localhost:4200', 
-    'https://leonardsmedia.de', 
-    'https://www.leonardsmedia.de', 
+    'https://car.xpnda.de', 
+    'https://www.car.xpnda.de', 
     'http://192.168.178.111:4200'
   ];
   
