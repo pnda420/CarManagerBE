@@ -16,6 +16,15 @@ interface EmailParams extends Record<string, unknown> {
     footer_note?: string;
 }
 
+interface CarAlertEmailParams {
+    to_email: string;
+    subject: string;
+    customer_name: string;
+    car_name: string;
+    alert_message: string;
+    car_details: string;
+}
+
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
@@ -29,6 +38,7 @@ export class EmailService {
         this.templateId = this.configService.get<string>('EMAILJS_TEMPLATE_ID');
         this.publicKey = this.configService.get<string>('EMAILJS_PUBLIC_KEY');
         this.privateKey = this.configService.get<string>('EMAILJS_PRIVATE_KEY');
+
 
         if (!SEND_REAL_EMAILS) {
             this.logger.warn('⚠️  EMAIL SERVICE IM MOCK MODE - Emails werden nur geloggt!');
@@ -74,6 +84,48 @@ export class EmailService {
         }
     }
 
-   
+    async sendCarAlert(params: EmailParams): Promise<void> {
+        if (!SEND_REAL_EMAILS) {
+            this.logger.log('📧 [MOCK] Car Alert Email würde gesendet werden:');
+            this.logger.log(`   An: ${params.to_email}`);
+            this.logger.log(`   Betreff: ${params.subject}`);
+            this.logger.log(`   Kunde: ${params.customer_name}`);
+            this.logger.log(`   Fahrzeug: ${params.car_name}`);
+            this.logger.log(`   Alert: ${params.alert_message}`);
+            this.logger.log(`   Details: ${params.car_details}`);
+            return;
+        }
+
+        try {
+            const emailParams = {
+                to_email: params.to_email,
+                subject: params.subject,
+                customer_name: params.customer_name,
+                car_name: params.car_name,
+                alert_message: params.alert_message,
+                car_details: params.car_details,
+                greeting: `Hallo ${params.customer_name}`,
+                footer_note: 'Du kannst deine Benachrichtigungseinstellungen jederzeit in deinem Profil ändern.',
+            };
+
+            const response = await emailjs.send(
+                this.serviceId,
+                this.templateId,
+                emailParams,
+                {
+                    publicKey: this.publicKey,
+                    privateKey: this.privateKey,
+                }
+            );
+
+            this.logger.log(`✅ Car Alert Email erfolgreich gesendet: ${response.status}`);
+        } catch (error) {
+            this.logger.error('❌ Fehler beim Car Alert Email-Versand:', error);
+            throw new Error(`Car Alert Email konnte nicht gesendet werden: ${error.message}`);
+        }
+    }
+
+
+
 
 }

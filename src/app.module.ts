@@ -12,6 +12,8 @@ import { Car } from './cars/cars.entity';
 import { TuningGroup } from './tuning/tuning-group.entity';
 import { TuningPart } from './tuning/tuning-part.entity';
 import { ProxyModule } from './proxy/proxy.module';
+import { AlertsModule } from './alerts-settings/alerts.module';
+import { AlertSettings } from './alerts-settings/alert-settings.entity';
 
 @Module({
   imports: [
@@ -23,7 +25,8 @@ import { ProxyModule } from './proxy/proxy.module';
       username: 'app' ,
       password: 'secret' ,
       database: 'db_car_manager' ,
-      entities: [User, Car, TuningGroup, TuningPart],
+      entities: [User, Car, TuningGroup, TuningPart, AlertSettings],
+      migrations: ['dist/migrations/*.js'],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
@@ -34,6 +37,7 @@ import { ProxyModule } from './proxy/proxy.module';
     TuningModule,
     CarsModule,
     ProxyModule,
+    AlertsModule,
   ],
 })
 export class AppModule { }
