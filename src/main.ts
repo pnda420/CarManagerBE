@@ -14,13 +14,14 @@ const allowList = [
   'http://192.168.178.111:4200',
 ];
 
-app.enableCors({
-  origin: allowList,
-  credentials: true,
-  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Requested-With','X-XSRF-TOKEN','Accept','Origin'],
-  optionsSuccessStatus: 204,
-});
+  app.enableCors({
+    origin: true,                 // spiegelt jede Origin zurück
+    credentials: true,            // erlaubt Cookies/Authorization mitzusenden
+    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+    // allowedHeaders weglassen = Browser-Request-Headers werden gespiegelt
+    exposedHeaders: ['Authorization', 'Content-Length', 'Location'],
+    optionsSuccessStatus: 204,
+  });
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
